@@ -97,7 +97,7 @@ Adding the marketplace makes every plugin in this repository available. It does 
 /plugin install model-right-sizer@cloudzero
 ```
 
-Installing `cost-analyst@cloudzero` gives you the 11 cost analysis skills and the pre-configured CloudZero MCP server. Installing `model-right-sizer@cloudzero` gives you the model-right-sizer agent and its four companion skills.
+Installing `cost-analyst@cloudzero` gives you the 11 cost analysis skills and the pre-configured CloudZero MCP server. Installing `model-right-sizer@cloudzero` gives you the model-right-sizer agent and its 11 companion skills.
 
 For platform setup and more installation guidance, see the [CloudZero AI Hub](https://docs.cloudzero.com/docs/ai-getting-started).
 
@@ -221,7 +221,7 @@ Fetches top unaddressed CloudZero Optimize recommendations, dispatches parallel 
 
 ### Model Right Sizer Plugin
 
-The Model Right Sizer plugin includes one agent and four skills:
+The Model Right Sizer plugin includes one agent and 11 skills. The four you reach for day to day are below; the other seven (the in-flight budget guard and the research, tuning, and release-report skills) are listed in the [plugin README](plugins/model-right-sizer/README.md).
 
 #### The `model-right-sizer` Agent
 **Triggered by:** "Blueprint this task", "Which model should this run on?", "Give me a usage report"
