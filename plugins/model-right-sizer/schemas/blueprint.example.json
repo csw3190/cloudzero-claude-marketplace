@@ -125,7 +125,7 @@
       "signals": {
         "effectiveness": {
           "score": 25,
-          "reason": "A false positive costs one extra read downstream and a false negative is caught by the summarizer, so cost of error is low and bounded."
+          "reason": "A false positive costs one extra close read downstream. A false negative is the remaining risk: the thread still reaches the summarizer, which reads every thread for its own summary, but without the close read a flag would have bought. That is why the filter is recall-tuned, and why cost of error is low and bounded rather than zero."
         },
         "efficiency": {
           "score": 90,
@@ -140,7 +140,7 @@
         "primary": { "model": "local:qwen3-4b-instruct-2507-4bit", "confidence": 65 },
         "runner_up": { "model": "claude-haiku-4-5", "effort": "none", "confidence": 35 },
         "what_flips_it": "If the shortlist ever becomes the deliverable instead of an input the summarizer re-reads, or if the stage has to run where no local runtime is installed, it goes to Haiku: a local pick is barred from producing output anyone reads directly, and it must never be the only path.",
-        "why_not_tier_above": "Sonnet's reasoning depth buys nothing on a one-signal recall-tuned filter whose misses are caught one stage later.",
+        "why_not_tier_above": "Sonnet's reasoning depth buys nothing on a one-signal recall-tuned filter whose misses still get the summarizer's ordinary read one stage later.",
         "why_not_tier_below": "The only tier below is a keyword grep, which cannot catch the paraphrases ('stuck on', 'waiting on review') this filter exists for.",
         "local_gate": {
           "denied_by": [],
