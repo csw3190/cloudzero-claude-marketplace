@@ -31,6 +31,10 @@ Checks:
     a hard error rather than a note in the rationale
   - a local primary falls back to a hosted runner-up, so the stage behaves
     the same way on a machine with no local runtime
+  - a local pick hands off through a message schema that carries an
+    `unverified` boolean, so the stage after it can tell a local candidate
+    from a fact. A terminal stage (`handoff_schema_ref: "none"`) cannot be
+    local at all: its output is the deliverable somebody reads directly
 
 Usage:
   uv run --no-project --with jsonschema scripts/validate_blueprint.py                  # validate the checked-in worked example
@@ -242,6 +246,67 @@ def check_local_routing_gate(instance: dict) -> list[str]:
     return errors
 
 
+def check_local_handoff_seam(instance: dict) -> list[str]:
+    """"Every local result is unverified by default" was the one local-tier rule
+    still enforced by nothing but the agent's prose. Unlike the gate's deny step,
+    it is derivable from the artifact itself rather than self-reported, because
+    the row already says where its output goes:
+
+    1. `handoff_schema_ref: "none"` marks a terminal stage, whose output is the
+       deliverable. A local tier may never produce a sentence somebody reads
+       directly, so that is a hard error whatever `local_gate` records.
+    2. Any other handoff must resolve to a `message_schemas[]` entry carrying an
+       `unverified` field of type `"boolean"`. Without it, the consuming stage
+       receives a local model's candidate in the same shape as a hosted fact and
+       has no field to branch on.
+
+    Both slots count, for the reason `local_gate` covers both: `what_flips_it`
+    can promote a runner-up.
+    """
+    errors: list[str] = []
+    schemas = {s.get("id"): s for s in instance.get("message_schemas", [])}
+
+    for group in ("blueprint_rows", "work_routing_map"):
+        for row in instance.get(group, []):
+            pick = row.get("pick")
+            if not isinstance(pick, dict):
+                continue
+            named = ", ".join(
+                f"{slot}={pick[slot]['model']!r}"
+                for slot in ("primary", "runner_up")
+                if isinstance((pick.get(slot) or {}).get("model"), str)
+                and pick[slot]["model"].startswith(LOCAL_MODEL_PREFIX)
+            )
+            if not named:
+                continue
+
+            where = f"{group}[id={row.get('id')!r}].handoff_schema_ref"
+            ref = row.get("handoff_schema_ref")
+            if ref == "none":
+                errors.append(
+                    f"{where}: 'none' marks a terminal stage, whose output is the "
+                    f"deliverable, and the pick names {named}. A local result is input "
+                    "for a stronger stage to check, never the thing somebody reads: "
+                    "route this stage hosted, or add the stage that checks it"
+                )
+                continue
+
+            fields = (schemas.get(ref) or {}).get("fields") or []
+            has_flag = any(
+                isinstance(f, dict) and f.get("name") == "unverified" and f.get("type") == "boolean"
+                for f in fields
+            )
+            if not has_flag:
+                errors.append(
+                    f"{where}: the pick names {named}, so the handoff must resolve to a "
+                    f"message_schemas[] entry with an 'unverified' field of type "
+                    f"'boolean', and {ref!r} has none. Without it the consumer gets a "
+                    "local candidate in the same shape as a hosted fact"
+                )
+
+    return errors
+
+
 def validate(schema: dict, instance: dict) -> list[str]:
     """Return human-readable error strings for `instance` against `schema`; empty means conformant."""
     schema_errors = sorted(
@@ -267,6 +332,7 @@ def validate(schema: dict, instance: dict) -> list[str]:
                 )
     errors.extend(check_local_tier_basis(instance))
     errors.extend(check_local_routing_gate(instance))
+    errors.extend(check_local_handoff_seam(instance))
     return errors
 
 

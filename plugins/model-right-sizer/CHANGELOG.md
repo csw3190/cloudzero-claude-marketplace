@@ -90,6 +90,18 @@ All notable changes to `model-right-sizer.md` are documented here, most recent f
   stage arrives on an open-weight model. A `deterministic_query_layer`
   runner-up is a legitimate fallback — the rule is runtime independence, not
   "must be a hosted model". 13 tests.
+- **"Every local result is unverified by default" is checked at the seam.**
+  It was the last local-tier rule that only the agent's prose enforced, and
+  unlike the deny step it doesn't depend on self-report: the row already
+  says where its output goes. `validate_blueprint.py` now rejects a local
+  pick (either slot) on a terminal stage (`handoff_schema_ref: "none"`),
+  because that stage's output is the deliverable somebody reads directly.
+  Any other handoff must resolve to a `message_schemas[]` entry with an
+  `unverified` field of type `"boolean"`, so the consuming stage has a field
+  to branch on instead of receiving a local candidate in the same shape as a
+  hosted fact. The worked example's `blocker-shortlist-v1` seam already
+  carries the flag. 4 tests, each failing against the validator before this
+  check.
 
 ### Changed
 - `schemas/blueprint.schema.json`: `modelChoice.model` documents

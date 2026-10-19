@@ -407,6 +407,79 @@ def test_a_recorded_gate_on_a_hosted_pick_is_harmless():
     assert validate_blueprint.validate(SCHEMA, instance) == []
 
 
+# --- "unverified by default", checked at the seam ------------------------------
+#
+# The deny step is self-reported: nothing on a row says a stage is claim-shaped
+# except the agent's own `denied_by`. Where a stage's output goes is on the row,
+# though, so "a local result is never the deliverable" is derivable, not trusted.
+
+
+def _local_row(instance):
+    return next(
+        r for r in instance["blueprint_rows"]
+        if r["pick"]["primary"]["model"].startswith("local:")
+    )
+
+
+def test_local_pick_on_a_terminal_stage_is_rejected():
+    """A terminal stage's output is what somebody reads, and a gate that passes
+    every step cannot make that safe for a local tier."""
+    instance = copy.deepcopy(EXAMPLE)
+    _local_row(instance)["handoff_schema_ref"] = "none"
+
+    errors = validate_blueprint.validate(SCHEMA, instance)
+
+    assert errors
+    assert any("terminal stage" in e for e in errors)
+
+
+def test_local_pick_whose_handoff_has_no_unverified_flag_is_rejected():
+    """Without the flag the consumer receives a local candidate in the same shape
+    as a hosted fact, and has nothing to branch on."""
+    instance = copy.deepcopy(EXAMPLE)
+    ref = _local_row(instance)["handoff_schema_ref"]
+    seam = next(s for s in instance["message_schemas"] if s["id"] == ref)
+    seam["fields"] = [f for f in seam["fields"] if f["name"] != "unverified"]
+
+    errors = validate_blueprint.validate(SCHEMA, instance)
+
+    assert errors
+    assert any("'unverified'" in e for e in errors)
+
+
+def test_an_unverified_flag_that_is_not_a_boolean_does_not_count():
+    """A free-text 'unverified' field is a note, not something a consumer branches on."""
+    instance = copy.deepcopy(EXAMPLE)
+    ref = _local_row(instance)["handoff_schema_ref"]
+    seam = next(s for s in instance["message_schemas"] if s["id"] == ref)
+    for field in seam["fields"]:
+        if field["name"] == "unverified":
+            field["type"] = "string"
+
+    errors = validate_blueprint.validate(SCHEMA, instance)
+
+    assert errors
+    assert any("'unverified'" in e for e in errors)
+
+
+def test_local_runner_up_is_held_to_the_seam_rule_too():
+    """The runner-up can be promoted by `what_flips_it`, so a hosted primary with a
+    local runner-up on a stage whose handoff carries no flag is rejected as well."""
+    instance = copy.deepcopy(EXAMPLE)
+    hosted = next(
+        r for r in instance["blueprint_rows"]
+        if not r["pick"]["primary"]["model"].startswith("local:")
+        and r["handoff_schema_ref"] not in validate_blueprint.NON_REFERENCE_HANDOFFS
+    )
+    local_pick(instance, index=instance["blueprint_rows"].index(hosted), slot="runner_up",
+               model="local:qwen3-4b-instruct-2507-4bit")
+
+    errors = validate_blueprint.validate(SCHEMA, instance)
+
+    assert errors
+    assert any("handoff_schema_ref" in e and "runner_up=" in e for e in errors)
+
+
 @pytest.mark.parametrize("rate", [float("nan"), float("inf")])
 @pytest.mark.parametrize("basis", ["amortized_local", "provider_list_price"])
 def test_non_finite_rate_is_rejected(basis, rate):
