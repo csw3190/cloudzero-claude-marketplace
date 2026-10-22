@@ -122,7 +122,9 @@ All notable changes to `model-right-sizer.md` are documented here, most recent f
   routed to the local tier with a runner-up on Haiku, its amortized price-sheet
   entry, and a handoff schema whose payload carries an explicit `unverified`
   field. It is the worked example of a gated local pick, validated in CI like
-  the rest of the file.
+  the rest of the file. Its `token_ceiling` follows the agent's fallback for a
+  tier missing from `DISPATCH_FLOORS`: the additive formula anchored on Haiku,
+  the calibrated tier nearest by price ratio, marked unverified in the ledger.
 - The local tier's **residency** argument now names its trust boundary instead
   of resting on "never leaves the machine." That phrase is a claim about the
   network hop, not about the disk: the boundary is the operator's runtime, and

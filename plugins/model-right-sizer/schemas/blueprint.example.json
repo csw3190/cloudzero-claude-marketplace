@@ -153,7 +153,7 @@
       "default_model": "claude-haiku-4-5",
       "keep_or_override": "override",
       "budget": {
-        "token_ceiling": 400000,
+        "token_ceiling": 53613,
         "real_work_signals": {
           "tool_call_volume": { "value": 0.2, "reason": "One sweep over the day's threads and a shortlist write -- not a multi-turn tool loop." },
           "content_volume": { "value": 0.85, "reason": "Every thread in every channel, the highest-volume stage in the flow." },
@@ -165,7 +165,7 @@
         "thinking_budget": null
       },
       "handoff_schema_ref": "blocker-shortlist-v1",
-      "rationale": "Bulk, mechanical, off the critical path, and unverified output a stronger stage re-reads: the routing gate's deny and compound checks both pass, and the amortized local basis undercuts Haiku at this volume. Falls back to the Haiku runner-up wherever no local runtime is present. token_ceiling stays a volume bound: eval/token_ceiling_formula.py has no local-tier floor, so the six real_work_signals record the rating schema 1.2 requires without pretending compute_token_ceiling produced 400000."
+      "rationale": "Bulk, mechanical, off the critical path, and unverified output a stronger stage re-reads: the routing gate's deny and compound checks both pass, and the amortized local basis undercuts Haiku at this volume. Falls back to the Haiku runner-up wherever no local runtime is present. token_ceiling is compute_token_ceiling_additive on claude-haiku-4-5's floor and span: DISPATCH_FLOORS has no local tier, and Haiku is the calibrated tier nearest this model by price ratio, so the figure is marked unverified this run in uncertainty_ledger.assumptions."
     }
   ],
   "work_routing_map": [
@@ -224,12 +224,15 @@
   "uncertainty_ledger": {
     "assumptions": [
       "Digest volume stays under ~50 channels/day",
-      "A channel-config table already exists and is queryable"
+      "A channel-config table already exists and is queryable",
+      "stage-3 token_ceiling 53613 is unverified this run: DISPATCH_FLOORS has no local tier, so it is compute_token_ceiling_additive anchored on claude-haiku-4-5's floor/span, the calibrated tier nearest local:qwen3-4b-instruct-2507-4bit by price ratio ($0.20/$1.43 vs $1/$5 per 1M), with the row's own real_work_signals",
+      "stage-3 token_ceiling uses the additive formula, marked UNVALIDATED pending a fresh held-out task's real actuals"
     ],
     "price_sheet_freshness": "verified_this_run",
     "would_measure": [
       "Actual per-channel summary token count once real thread lengths are known",
-      "Whether Haiku alone clears the bar once volume passes the stated flip condition"
+      "Whether Haiku alone clears the bar once volume passes the stated flip condition",
+      "stage-3's actual local-tier token spend against its Haiku-anchored ceiling: context_ingestion_volume, one of the stage's two heaviest signals, carries weight 0.0 in the default formula, so the anchor may undershoot a full-backlog sweep"
     ],
     "calibration": {
       "ledger_found": false,
